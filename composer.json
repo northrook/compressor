@@ -1,0 +1,26 @@
+{
+  "name": "northrook/compressor",
+  "type": "library",
+  "description": "A PHP compression library.",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Northrook\\": ""
+    }
+  },
+  "authors": [
+    {
+      "name": "Martin",
+      "email": "mn@northrook.com"
+    }
+  ],
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "php": ">=8.2",
+    "ext-zlib": "*"
+  },
+  "require-dev": {
+    "northrook/dev-env": "dev-main"
+  }
+}
