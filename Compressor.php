@@ -1,18 +1,29 @@
 <?php
 
+declare( strict_types = 1 );
+
 namespace Northrook;
 
-use Stringable;
+use Stringable, LogicException;
 use function gzcompress, gzuncompress, serialize, unserialize, is_string, ltrim, number_format, strlen, substr, max, min;
 
 
-class Compressor implements Stringable
+/**
+ * @property-read string $data   The compressed data string
+ * @property-read string $report Simple performance report; Data {type}, from {size} to {size}, saving {difference}%.
+ *
+ */
+final class Compressor implements Stringable
 {
     private readonly string $type;
     private float           $initialSizeKb;
     private float           $compressedSizeKb;
     private float           $percentImprovement;
 
+    /**
+     * @param mixed  $data   The data to compress.
+     * @param int    $level  `[9]` From `0` to `9`.
+     */
     private function __construct(
         private mixed $data,
         private int   $level,
@@ -23,30 +34,75 @@ class Compressor implements Stringable
         $this->percentDifference();
     }
 
+    /**
+     * Property accessor.
+     */
+    public function __get( string $property ) : string {
+        return match ( $property ) {
+            'data'   => $this->__toString(),
+            'report' => $this->getReport(),
+        };
+    }
+
+    /**
+     * Check if the property exists.
+     */
+    public function __isset( string $property ) : bool {
+        return isset( $this->$property );
+    }
+
+    /**
+     * @throws LogicException when writing a property.
+     */
+    public function __set( string $name, mixed $value ) {
+        throw new LogicException( $this::class . ' properties are read-only.' );
+    }
+
+    /**
+     * Get the compressed data.
+     *
+     * @return string the compressed data
+     *
+     * @throws LogicException if the {@see $data} is not a string
+     */
     public function __toString() : string {
-        return $this->data;
+        return is_string( $this->data )
+            ? $this->data
+            : throw new LogicException( "An error occured during compression." );
     }
 
-    public function getReport() : string {
-        return "Comressed {$this->type}, from {$this->initialSizeKb}kB to {$this->compressedSizeKb}kB, saving {$this->percentImprovement}%.";
-    }
-
+    /**
+     * @param mixed  $data   The data to compress.
+     * @param int    $level  `[9]` From `0` to `9`.
+     *
+     * @return Compressor
+     */
     public static function compress( mixed $data, int $level = 9 ) : Compressor {
         return new Compressor( $data, $level );
     }
 
-    public static function decompress( mixed $data, bool $raw = false ) : mixed {
+    /**
+     * @param string  $data
+     * @param bool    $raw
+     *
+     * @return mixed
+     */
+    public static function decompress( string $data, bool $raw = false ) : mixed {
         return $raw ? gzuncompress( $data ) : unserialize( gzuncompress( $data ) );
     }
 
     private function data() : void {
         $this->initialSizeKb = $this->dataSizeKb();
         $this->type          = gettype( $this->data );
-        $this->data          = serialize( $this->data );
+        $this->data          = is_string( $this->data ) ? $this->data : serialize( $this->data );
     }
 
     private function level() : void {
         $this->level = max( min( 9, $this->level ), 0 );
+    }
+
+    private function getReport() : string {
+        return "Compressed data {$this->type}, from {$this->initialSizeKb}kB to {$this->compressedSizeKb}kB, saving {$this->percentImprovement}%.";
     }
 
     private function dataSizeKb() : float {
@@ -58,11 +114,12 @@ class Compressor implements Stringable
         $decimals = 2;
         // If we have leading zeros
         if ( $bytes < 1 ) {
-            $floating = substr( $bytes, 2 );
+            $floating = substr( (string) $bytes, 2 );
+            // Remove leading zeros
             $decimals += strlen( $floating ) - strlen( ltrim( $floating, '0' ) );
         }
 
-        return number_format( $bytes, $decimals, '.', '' );
+        return (float) number_format( $bytes, $decimals, '.', '' );
     }
 
     private function percentDifference() : void {
