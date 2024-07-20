@@ -9,16 +9,20 @@ use function gzcompress, gzuncompress, serialize, unserialize, is_string, ltrim,
 
 
 /**
- * @property-read string $data   The compressed data string
+ * @property-read string $type   Unserialized data type
+ * @property-read string $data   Compressed data string
  * @property-read string $report Simple performance report; Data {type}, from {size} to {size}, saving {difference}%.
  *
+ * @author Martin Nielsen <mn@northrook.com>
+ *
+ * @link   https://github.com/northrook/compressor Documentation
  */
 final class Compressor implements Stringable
 {
-    private readonly string $type;
-    private float           $initialSizeKb;
-    private float           $compressedSizeKb;
-    private float           $percentImprovement;
+    private string $type;
+    private float  $initialSizeKb;
+    private float  $compressedSizeKb;
+    private float  $percentImprovement;
 
     /**
      * @param mixed  $data   The data to compress.
@@ -39,6 +43,7 @@ final class Compressor implements Stringable
      */
     public function __get( string $property ) : string {
         return match ( $property ) {
+            'type'   => $this->type,
             'data'   => $this->__toString(),
             'report' => $this->getReport(),
         };
@@ -48,7 +53,11 @@ final class Compressor implements Stringable
      * Check if the property exists.
      */
     public function __isset( string $property ) : bool {
-        return isset( $this->$property );
+        return match ( $property ) {
+            'type'  => isset( $this->type ),
+            'data'  => isset( $this->data ),
+            default => false,
+        };
     }
 
     /**
